@@ -7,19 +7,28 @@ echo Claims Checker - One Shot Installer
 echo ==============================================
 echo.
 
+set "HAS_WINGET=1"
 where winget >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] winget is not available on this laptop.
-  echo Install App Installer from Microsoft Store, then rerun this script.
-  exit /b 1
+  set "HAS_WINGET=0"
+  echo [WARN] winget is not available on this laptop.
+  echo        Auto-install of Python/Tesseract via winget will be skipped.
+  echo.
 )
 
 echo [1/6] Installing Python 3.10 (user scope)...
 py -3.10 --version >nul 2>&1
 if errorlevel 1 (
-  winget install -e --id Python.Python.3.10 --scope user --accept-package-agreements --accept-source-agreements
-  if errorlevel 1 (
-    echo [ERROR] Failed to install Python 3.10 via winget.
+  if "%HAS_WINGET%"=="1" (
+    winget install -e --id Python.Python.3.10 --scope user --accept-package-agreements --accept-source-agreements
+    if errorlevel 1 (
+      echo [ERROR] Failed to install Python 3.10 via winget.
+      exit /b 1
+    )
+  ) else (
+    echo [ERROR] Python 3.10 is not installed and winget is unavailable.
+    echo        Ask IT to install Python 3.10 x64 from:
+    echo        https://www.python.org/downloads/windows/
     exit /b 1
   )
 ) else (
@@ -38,14 +47,55 @@ if not defined PY_EXE (
 )
 
 echo [2/6] Installing Tesseract OCR...
-winget install -e --id UB-Mannheim.TesseractOCR --scope user --accept-package-agreements --accept-source-agreements
-if errorlevel 1 (
-  echo Primary Tesseract package not available. Trying alternate package...
-  winget install -e --id Tesseract-OCR.Tesseract --scope user --accept-package-agreements --accept-source-agreements
-  if errorlevel 1 (
-    echo [WARN] Tesseract install failed. Tool can still run for text-based PDFs.
-    echo        Scanned/image PDFs may fail until Tesseract is installed.
+set "TESS_EXE="
+where tesseract >nul 2>&1
+if not errorlevel 1 (
+  for /f "delims=" %%I in ('where tesseract') do (
+    if not defined TESS_EXE set "TESS_EXE=%%I"
   )
+)
+if not defined TESS_EXE (
+  if exist "%ProgramFiles%\Tesseract-OCR\tesseract.exe" set "TESS_EXE=%ProgramFiles%\Tesseract-OCR\tesseract.exe"
+)
+if not defined TESS_EXE (
+  if exist "%LocalAppData%\Programs\Tesseract-OCR\tesseract.exe" set "TESS_EXE=%LocalAppData%\Programs\Tesseract-OCR\tesseract.exe"
+)
+
+if defined TESS_EXE (
+  echo Tesseract already installed: %TESS_EXE%
+) else (
+  if "%HAS_WINGET%"=="1" (
+    winget install -e --id UB-Mannheim.TesseractOCR --scope user --accept-package-agreements --accept-source-agreements
+    if errorlevel 1 (
+      echo Primary Tesseract package not available. Trying alternate package...
+      winget install -e --id Tesseract-OCR.Tesseract --scope user --accept-package-agreements --accept-source-agreements
+    )
+  ) else (
+    echo winget unavailable. Downloading Tesseract installer directly...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $urls=@('https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.5.0.20241111.exe','https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe'); $dst=Join-Path $env:TEMP 'tesseract-ocr-setup.exe'; $ok=$false; foreach($u in $urls){ try{ Invoke-WebRequest -Uri $u -OutFile $dst -UseBasicParsing; if((Get-Item $dst).Length -gt 0){ $ok=$true; break } } catch {} }; if(-not $ok){ throw 'Could not download Tesseract installer.' }; Start-Process -FilePath $dst -ArgumentList '/S' -Wait; Remove-Item $dst -Force -ErrorAction SilentlyContinue"
+    if errorlevel 1 (
+      echo [WARN] Direct Tesseract download/install failed.
+    )
+  )
+)
+
+set "TESS_EXE="
+where tesseract >nul 2>&1
+if not errorlevel 1 (
+  for /f "delims=" %%I in ('where tesseract') do (
+    if not defined TESS_EXE set "TESS_EXE=%%I"
+  )
+)
+if not defined TESS_EXE (
+  if exist "%ProgramFiles%\Tesseract-OCR\tesseract.exe" set "TESS_EXE=%ProgramFiles%\Tesseract-OCR\tesseract.exe"
+)
+if not defined TESS_EXE (
+  if exist "%LocalAppData%\Programs\Tesseract-OCR\tesseract.exe" set "TESS_EXE=%LocalAppData%\Programs\Tesseract-OCR\tesseract.exe"
+)
+if not defined TESS_EXE (
+  echo [WARN] Tesseract install not detected. Tool can still run for text-based PDFs.
+  echo        Scanned/image PDFs may fail until Tesseract is installed.
+  echo        If corporate policy blocks downloads, ask IT to install Tesseract OCR.
 )
 
 echo [3/6] Creating virtual environment (.venv310)...
