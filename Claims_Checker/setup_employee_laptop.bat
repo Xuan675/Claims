@@ -64,7 +64,13 @@ if not defined TESS_EXE (
 if defined TESS_EXE (
   echo Tesseract already installed: %TESS_EXE%
 ) else (
-  if "%HAS_WINGET%"=="1" (
+  if exist "%CD%\tesseract-ocr-setup.exe" (
+    echo Found local Tesseract installer: %CD%\tesseract-ocr-setup.exe
+    start /wait "" "%CD%\tesseract-ocr-setup.exe" /S
+    if errorlevel 1 (
+      echo [WARN] Local Tesseract installer failed.
+    )
+  ) else if "%HAS_WINGET%"=="1" (
     winget install -e --id UB-Mannheim.TesseractOCR --scope user --accept-package-agreements --accept-source-agreements
     if errorlevel 1 (
       echo Primary Tesseract package not available. Trying alternate package...
