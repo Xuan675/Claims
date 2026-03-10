@@ -71,10 +71,11 @@ if defined TESS_EXE (
       winget install -e --id Tesseract-OCR.Tesseract --scope user --accept-package-agreements --accept-source-agreements
     )
   ) else (
-    echo winget unavailable. Downloading Tesseract installer directly...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $urls=@('https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.5.0.20241111.exe','https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe'); $dst=Join-Path $env:TEMP 'tesseract-ocr-setup.exe'; $ok=$false; foreach($u in $urls){ try{ Invoke-WebRequest -Uri $u -OutFile $dst -UseBasicParsing; if((Get-Item $dst).Length -gt 0){ $ok=$true; break } } catch {} }; if(-not $ok){ throw 'Could not download Tesseract installer.' }; Start-Process -FilePath $dst -ArgumentList '/S' -Wait; Remove-Item $dst -Force -ErrorAction SilentlyContinue"
+    echo winget unavailable. Downloading Tesseract installer into this folder...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $urls=@('https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.5.0.20241111.exe','https://github.com/tesseract-ocr/tesseract/releases/download/5.5.0/tesseract-ocr-w64-setup-5.5.0.20241111.exe'); $dst=Join-Path (Get-Location) 'tesseract-ocr-setup.exe'; $ok=$false; foreach($u in $urls){ try{ Invoke-WebRequest -Uri $u -OutFile $dst -UseBasicParsing; if((Get-Item $dst).Length -gt 0){ $ok=$true; break } } catch {} }; if(-not $ok){ throw 'Could not download Tesseract installer.' }; Start-Process -FilePath $dst -ArgumentList '/S' -Wait"
     if errorlevel 1 (
       echo [WARN] Direct Tesseract download/install failed.
+      echo        If download succeeded, the installer should be in: %CD%\tesseract-ocr-setup.exe
     )
   )
 )
